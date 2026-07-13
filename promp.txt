@@ -1,0 +1,421 @@
+[@game-studio](plugin://game-studio@openai-curated-remote) 
+EXECUTION RULES
+
+Do not attempt to implement the entire project superficially in one pass.
+
+Work through the phases below in strict order. A phase is complete only
+after its acceptance criteria have been executed and verified.
+
+Do not begin the next phase if the current phase has failing tests,
+placeholder implementations, TODO comments, mocked core functionality,
+or incomplete documentation.
+
+At the end of every phase:
+
+1. Run all relevant quality checks.
+2. Start the application.
+3. Test the implemented flow manually.
+4. Update docs/05_PROGRESS.md with:
+   - files created or changed
+   - functionality completed
+   - commands executed
+   - test results
+   - bugs found and fixed
+   - remaining work
+5. Continue automatically to the next phase when checks pass.
+
+Do not stop to ask for confirmation unless blocked by credentials or an
+external paid service.
+
+Core game functionality must not contain:
+
+- fake multiplayer
+- simulated remote players presented as real players
+- hardcoded successful responses
+- placeholder buttons
+- empty service methods
+- TODO-only implementations
+- skipped tests
+- disabled TypeScript errors
+- broad use of any
+- duplicated Socket.IO contracts
+PHASE 0 — FOUNDATION
+
+Create the monorepo, documentation, shared contracts, formatting,
+linting, type checking, tests, and local development scripts.
+
+Acceptance criteria:
+
+- pnpm install succeeds
+- pnpm lint succeeds
+- pnpm typecheck succeeds
+- pnpm test succeeds
+- client and server start locally
+
+PHASE 1 — OFFLINE GAMEPLAY
+
+Implement a complete local playable arena before networking:
+
+- player movement
+- mouse aiming
+- shooting
+- projectile collision
+- health
+- dash
+- round reset
+- HUD
+- sound
+- visual feedback
+
+Acceptance criteria:
+
+- the game is playable for at least three consecutive rounds
+- no serious console errors
+- all gameplay unit tests pass
+- no networking code is required to play the local prototype
+
+PHASE 2 — ROOM AND LOBBY
+
+Implement real Socket.IO room flow:
+
+- create room
+- join room
+- room limit of two players
+- ready status
+- countdown
+- leave room
+- rematch
+- room cleanup
+
+Acceptance criteria:
+
+- two independent browser contexts can join the same room
+- a third player is rejected
+- room state remains consistent for both players
+- automated integration tests pass
+
+PHASE 3 — AUTHORITATIVE MULTIPLAYER
+
+Move game simulation and combat authority to the server.
+
+Acceptance criteria:
+
+- clients send input only
+- server owns player position, projectiles, health, score, and winner
+- editing client health or position does not affect the authoritative state
+- both browsers observe the same round result
+- integration tests verify damage and scoring
+
+PHASE 4 — NETWORK SMOOTHING
+
+Implement:
+
+- snapshot interpolation
+- local prediction
+- reconciliation
+- sequence numbers
+- ping measurement
+- stale input rejection
+- input rate limiting
+
+Acceptance criteria:
+
+- movement remains reasonably smooth at simulated 100–200 ms latency
+- remote players do not visibly teleport during normal conditions
+- server remains authoritative
+
+PHASE 5 — RECONNECT
+
+Implement secure reconnect tokens and a 15-second grace period.
+
+Acceptance criteria:
+
+- refreshing one browser restores the correct player
+- a third browser cannot steal the disconnected slot
+- reconnect timeout awards the round correctly
+- reconnect tests pass
+
+PHASE 6 — VISUAL POLISH
+
+Use the Game Studio workflows to improve:
+
+- original sprites
+- arena background
+- HUD
+- particles
+- projectile trails
+- impact effects
+- screen shake
+- sound effects
+- menus and result screen
+- responsive layout
+
+Acceptance criteria:
+
+- no placeholder rectangles remain in the final presentation
+- visual style is consistent across menu, lobby, arena, and result screen
+- UI remains readable at 1366×768, 1920×1080, and mobile-width lobby screens
+- gameplay screenshots are saved under docs/evidence/
+
+PHASE 7 — FINAL E2E AND DELIVERY
+
+Run a complete two-browser test:
+
+1. Browser A creates a room.
+2. Browser B joins.
+3. Both become ready.
+4. Match starts.
+5. Both players move.
+6. Player A damages Player B.
+7. A round ends.
+8. Score synchronizes.
+9. One browser reloads and reconnects.
+10. Both request a rematch.
+
+Acceptance criteria:
+
+- lint passes
+- typecheck passes
+- unit tests pass
+- integration tests pass
+- multiplayer Playwright tests pass
+- production builds pass
+- no serious browser-console errors
+- README startup instructions are verified from a clean install
+EVIDENCE REQUIREMENTS
+
+Do not claim completion based only on compilation.
+
+Save evidence under docs/evidence/:
+
+- menu.png
+- lobby-two-players.png
+- active-match.png
+- damage-synchronized.png
+- round-result.png
+- reconnect-success.png
+- final-test-results.txt
+
+Use two isolated browser contexts for multiplayer verification.
+
+When testing on one computer, never treat two components inside the same
+browser page as two real players. Use separate browser contexts or separate
+browser instances with independent storage and Socket.IO connections.Use the installed Game Studio plugin and its relevant skills, especially
+game-studio, phaser-2d-game, game-playtest, game-ui-frontend,
+sprite-pipeline, and web-game-foundations.
+
+Build a production-quality browser game named "Neon Duel" from the current
+empty directory.
+
+PRODUCT
+
+Neon Duel is a real-time online 1v1 top-down arena shooter. Exactly two
+players join a private room using a six-character room code or invitation
+URL. Each player can move, aim, shoot, dash, take damage, and compete in a
+best-of-five match. The first player to win three rounds wins the match.
+
+Use original visual assets only. Do not use copyrighted game characters,
+logos, music, or copied assets.
+
+TECH STACK
+
+Create a pnpm and Turborepo monorepo:
+
+- apps/client: Phaser 3, TypeScript, Vite, Socket.IO Client, Howler.js
+- apps/server: Node.js, TypeScript, Fastify, Socket.IO, Zod
+- packages/shared: shared event contracts, schemas, constants, and types
+- Vitest for unit and integration tests
+- Playwright for two-browser multiplayer E2E tests
+- ESLint and Prettier
+
+Do not add a database to the MVP. Store rooms and matches in server memory.
+Design the code so PostgreSQL and Redis can be introduced later without
+rewriting the game domain.
+
+MULTIPLAYER ARCHITECTURE
+
+Use a server-authoritative architecture.
+
+The client must send input commands only. The server owns and validates:
+
+- player positions
+- movement speed
+- projectiles
+- hit detection
+- health and damage
+- shooting cooldown
+- dash cooldown
+- round state
+- match score
+- spawn points
+- match winner
+
+Run the server simulation at 30 ticks per second and send snapshots at
+approximately 20 snapshots per second.
+
+Implement:
+
+- normalized player input
+- input sequence numbers
+- snapshot interpolation for remote players
+- basic local-player prediction
+- server reconciliation
+- ping measurement
+- rate limiting
+- payload validation
+- maximum message size
+- stale-input rejection
+
+ROOM FLOW
+
+Implement:
+
+- create private room
+- random six-character room code
+- invitation URL
+- join room
+- maximum two players
+- ready state
+- match countdown
+- leave room
+- rematch
+- idle room cleanup
+- heartbeat
+- disconnect detection
+- reconnect token
+- 15-second reconnect grace period
+- prevent a third player from taking a disconnected player's slot
+- pause the round temporarily while waiting for reconnection
+- award the round to the connected opponent after reconnect timeout
+
+GAMEPLAY
+
+Controls:
+
+- WASD or arrow keys: move
+- mouse: aim
+- left click: shoot
+- Space: dash
+- Escape: pause/settings overlay
+
+Rules:
+
+- 100 health per player
+- one projectile weapon
+- configurable damage and fire cooldown
+- configurable dash cooldown
+- one symmetrical arena
+- best of five rounds
+- first to three round wins
+- short countdown before each round
+- spawn protection for a brief configurable duration
+
+SCENES
+
+Implement:
+
+- BootScene
+- MenuScene
+- LobbyScene
+- ArenaScene
+- ResultScene
+
+The UI must include:
+
+- create room and join room forms
+- room code and copy invitation button
+- player connection and ready indicators
+- health bars
+- round score
+- match timer
+- ping indicator
+- dash cooldown
+- disconnect/reconnect message
+- winner screen
+- rematch and leave buttons
+- sound controls
+- keyboard control guide
+
+VISUAL DIRECTION
+
+Use an original polished neon cyber-arena style with a dark background,
+cyan and magenta accents, readable silhouettes, responsive visual feedback,
+subtle screen shake, hit flashes, particles, projectile trails, and clean
+competitive HUD design.
+
+Use the Game Studio sprite and asset workflows to create coherent original
+assets. Keep generated source assets and optimized runtime assets organized
+and documented.
+
+DOCUMENTATION
+
+Before implementation, create:
+
+- README.md
+- AGENTS.md
+- docs/00_GAME_DESIGN.md
+- docs/01_ARCHITECTURE.md
+- docs/02_MULTIPLAYER_PROTOCOL.md
+- docs/03_ASSET_GUIDE.md
+- docs/04_TEST_PLAN.md
+- docs/05_PROGRESS.md
+
+Document all Socket.IO events and their Zod schemas.
+
+TESTING
+
+Add unit tests for:
+
+- room-code creation
+- two-player room limit
+- movement validation
+- cooldown validation
+- projectile hit detection
+- damage
+- round completion
+- match completion
+- reconnect timeout
+- invalid event payloads
+- input rate limits
+
+Add integration tests using two Socket.IO clients.
+
+Add a Playwright E2E test using two isolated browser contexts:
+
+1. Browser A creates a room.
+2. Browser B joins it.
+3. Both players become ready.
+4. The match starts.
+5. Player A moves.
+6. Browser B observes Player A moving.
+7. Player A shoots Player B.
+8. Player B loses health.
+9. The test completes a round and verifies the score.
+
+Provide optional latency and packet-jitter simulation for development.
+
+QUALITY GATES
+
+The project is not complete until all of these pass:
+
+- pnpm lint
+- pnpm typecheck
+- pnpm test
+- pnpm build
+- Playwright multiplayer E2E test
+- server starts successfully
+- client starts successfully
+- two browser instances can complete the multiplayer flow
+- no serious browser-console errors
+
+Run the game, inspect it visually, use the Game Studio playtest workflow,
+fix discovered problems, and repeat until the acceptance criteria pass.
+
+Do not stop after scaffolding or documentation. Implement the complete
+working MVP, run every available check, and update docs/05_PROGRESS.md with:
+
+- completed functionality
+- test commands and results
+- remaining non-MVP limitations
+- exact local startup instructions
+- deployment instructions
