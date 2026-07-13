@@ -13,7 +13,8 @@ import {
   pingSchema,
   readySchema,
   reconnectSchema,
-  rematchSchema
+  rematchSchema,
+  type RematchRequestedPayload
 } from "@neon-duel/shared";
 import type { ZodType } from "zod";
 
@@ -159,9 +160,19 @@ export const createNeonDuelApp = async (config: ServerConfig) => {
     socket.on(CLIENT_EVENTS.rematch, (payload: unknown) => {
       try {
         const data = parseWithSchema(rematchSchema, payload);
-        const startedCountdown = runtime.requestRematch(socket.id, data.roomCode, Date.now());
+        const result = runtime.requestRematch(socket.id, data.roomCode, Date.now());
         emitRoomUpdate(data.roomCode);
-        if (startedCountdown) {
+        if (result.notifyOpponent) {
+          socket.to(data.roomCode).emit(
+            SERVER_EVENTS.rematchRequested,
+            {
+              roomCode: data.roomCode,
+              requesterId: result.requesterId,
+              requesterName: result.requesterName
+            } satisfies RematchRequestedPayload
+          );
+        }
+        if (result.startedCountdown) {
           emitCountdown(data.roomCode);
         }
       } catch (error) {

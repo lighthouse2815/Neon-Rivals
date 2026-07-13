@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { GAME_CONSTANTS } from "@neon-duel/shared";
+import { GAME_CONSTANTS, type MatchState } from "@neon-duel/shared";
 
 import { NeonDuelRuntime, RuntimeError } from "../src/core/runtime";
 
@@ -14,6 +14,21 @@ const advanceTicks = (
     result = runtime.advance(startAt + tick * Math.round(1000 / GAME_CONSTANTS.simulationTickHz));
   }
   return result;
+};
+
+type RuntimeInternals = {
+  rooms: Map<string, { match: MatchState }>;
+};
+
+const setRoomToMatchOver = (runtime: NeonDuelRuntime, roomCode: string): void => {
+  const room = (runtime as unknown as RuntimeInternals).rooms.get(roomCode);
+  if (!room) {
+    throw new Error("Expected room to exist.");
+  }
+  room.match.phase = "match-over";
+  room.match.roundNumber = 5;
+  room.match.players[0]!.score = 3;
+  room.match.matchWinnerId = room.match.players[0]!.id;
 };
 
 describe("NeonDuelRuntime", () => {
@@ -80,5 +95,34 @@ describe("NeonDuelRuntime", () => {
     expect(summary?.players).toHaveLength(1);
     expect(summary?.players[0]?.score).toBe(1);
     expect(summary?.phase).toBe("waiting");
+  });
+
+  it("returns a finished match to the lobby and starts again only after both players agree", () => {
+    const runtime = new NeonDuelRuntime("http://127.0.0.1:4173");
+    const room = runtime.createRoom("socket-a", "Alpha", 0);
+    const joined = runtime.joinRoom("socket-b", room.roomCode, "Bravo", 10);
+    setRoomToMatchOver(runtime, room.roomCode);
+
+    const firstRequest = runtime.requestRematch("socket-a", room.roomCode, 20);
+    const lobbySummary = runtime.getRoomSummary(room.roomCode);
+
+    expect(firstRequest).toMatchObject({
+      requesterId: room.playerId,
+      requesterName: "Alpha",
+      notifyOpponent: true,
+      startedCountdown: false
+    });
+    expect(lobbySummary).toMatchObject({ phase: "waiting", roundNumber: 1 });
+    expect(lobbySummary?.players).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: room.playerId, ready: true, score: 0 }),
+        expect.objectContaining({ id: joined.playerId, ready: false, score: 0 })
+      ])
+    );
+
+    const secondRequest = runtime.requestRematch("socket-b", room.roomCode, 30);
+
+    expect(secondRequest).toMatchObject({ notifyOpponent: false, startedCountdown: true });
+    expect(runtime.getRoomSummary(room.roomCode)?.phase).toBe("countdown");
   });
 });

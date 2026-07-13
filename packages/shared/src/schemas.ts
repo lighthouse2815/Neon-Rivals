@@ -54,6 +54,12 @@ export const rematchSchema = z.object({
   roomCode: roomCodeSchema
 });
 
+export const rematchRequestedSchema = z.object({
+  roomCode: roomCodeSchema,
+  requesterId: z.string().uuid(),
+  requesterName: playerNameSchema
+});
+
 export const heartbeatSchema = z.object({
   roomCode: roomCodeSchema,
   reconnectToken: z.string().min(8).max(128).optional(),

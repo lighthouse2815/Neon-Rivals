@@ -98,14 +98,16 @@ test("two-browser multiplayer flow with reconnect and rematch", async ({ browser
   await pageA.waitForTimeout(300);
   await pageA.screenshot({ path: path.join(evidenceDir, "active-match.png") });
 
-  await sendInputCommand(pageA, {
+  const alphaAssaultInput = {
     moveX: 1,
     moveY: 0,
     aimX: 1,
     aimY: 0,
     shoot: true,
     dashPressed: false
-  });
+  };
+  await setInputOverride(pageA, alphaAssaultInput);
+  await sendInputCommand(pageA, alphaAssaultInput);
 
   await expect
     .poll(async () => {
@@ -132,12 +134,19 @@ test("two-browser multiplayer flow with reconnect and rematch", async ({ browser
   await waitForMatch(pageA, (match) => match?.phase === "match-over", 35_000);
   await pageA.bringToFront();
   await pageA.waitForTimeout(300);
+  await expect(pageA.locator(".panel__title")).toHaveText("You Win");
   await pageA.screenshot({ path: path.join(evidenceDir, "round-result.png") });
 
   await setInputOverride(pageA, null);
 
   await requestRematch(pageB);
-  await requestRematch(pageA);
+  await expect(pageA.locator(".panel__title")).toHaveText("Room Sync");
+  await expect(pageB.locator(".panel__title")).toHaveText("Room Sync");
+  await expect(pageA.locator(".banner")).toContainText("Bravo wants a rematch");
+  await expect(pageB.locator('[data-action="player-name"]')).toHaveValue("Bravo");
+  await pageA.screenshot({ path: path.join(evidenceDir, "rematch-request.png") });
+
+  await pageA.locator('[data-action="ready"]').click();
   await waitForMatch(pageA, (match) => match?.phase === "countdown" || match?.phase === "active", 15_000);
 
   await writeFile(
@@ -145,7 +154,7 @@ test("two-browser multiplayer flow with reconnect and rematch", async ({ browser
     [
       "E2E flow completed.",
       `Room: ${roomCode}`,
-      "Verified: create room, join room, ready flow, active match, synchronized damage, reconnect, rematch."
+      "Verified: create room, join room, ready flow, active match, synchronized damage, reconnect, rematch request notification, and player-name persistence."
     ].join("\n"),
     "utf8"
   );

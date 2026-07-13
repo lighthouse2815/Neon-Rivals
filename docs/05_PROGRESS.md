@@ -358,3 +358,78 @@ pnpm preview:e2e
 - `pnpm --filter @neon-duel/client typecheck`: passed.
 - `pnpm --filter @neon-duel/client test`: passed (1 test).
 - Manual local browser verification: arena displayed centered, `Back to Menu` appeared during Practice Offline, and a standard button click returned to the menu.
+
+## Online rematch lobby and persistent player name 2026-07-14
+
+### Files changed
+
+- `packages/shared/src/events.ts`
+- `packages/shared/src/schemas.ts`
+- `packages/shared/src/types.ts`
+- `apps/server/src/core/runtime.ts`
+- `apps/server/src/network/create-app.ts`
+- `apps/server/test/runtime.test.ts`
+- `apps/client/src/network/online-session.ts`
+- `apps/client/src/state.ts`
+- `apps/client/src/state.test.ts`
+- `apps/client/e2e/multiplayer.spec.ts`
+- `docs/02_MULTIPLAYER_PROTOCOL.md`
+- `docs/evidence/active-match.png`
+- `docs/evidence/damage-synchronized.png`
+- `docs/evidence/lobby-two-players.png`
+- `docs/evidence/reconnect-success.png`
+- `docs/evidence/rematch-request.png`
+- `docs/evidence/final-test-results.txt`
+
+### Functionality completed
+
+- The first online rematch request now resets the completed match to the existing room lobby, clears scores, resets the round number, and marks only the requester as ready.
+- Server event `room:rematch-requested` is defined once in `packages/shared`, documented with its payload, and emitted only to the opponent. The opponent sees a banner naming the player who requested another match.
+- The opponent starts the next countdown only by choosing `Ready Up`; duplicate/near-simultaneous rematch requests still follow the same server-authoritative ready flow.
+- The changed player name is stored locally by `AppStore` and restored for a new browser session instead of falling back to `Neon Pilot`.
+- The multiplayer E2E now holds the test player's shoot input through the match, preventing the regular input loop from overwriting the one-off shoot command before the match can finish.
+
+### Commands and runtime verification
+
+- `pnpm check`: passed. Lint, typecheck, all 14 unit/integration tests, and production builds passed for shared, client, and server.
+- `pnpm exec playwright test --config playwright.reuse-local.config.ts`: passed (1 test, 1.3 minutes) against isolated production preview ports. The temporary isolated Playwright configuration was removed after the run.
+- The standard `pnpm test:e2e` command was first blocked because an existing workspace Vite process owned port `4173`; no user process was stopped. The isolated production run verified the same E2E flow instead.
+- Two isolated browser contexts completed create/join/ready, synchronized combat and damage, reconnect, end of match, rematch request notification, lobby return, `Ready Up` countdown, and preservation of the reloaded player's `Bravo` name.
+
+### Evidence
+
+- `docs/evidence/rematch-request.png` captures the returned lobby and the opponent notification.
+- `docs/evidence/final-test-results.txt` records the successful two-browser E2E result.
+
+### Remaining work
+
+- None for the online rematch and player-name persistence change.
+
+## Result win/loss labels 2026-07-14
+
+### Files changed
+
+- `apps/client/src/app-controller.ts`
+- `apps/client/src/network/online-session.ts`
+- `apps/client/src/game/local-practice.ts`
+- `apps/client/e2e/multiplayer.spec.ts`
+- `docs/evidence/round-result.png`
+- `docs/05_PROGRESS.md`
+
+### Functionality completed
+
+- Online result titles now compare the server-authoritative `matchWinnerId` with the local player ID and display `You Win` or `You Lost`.
+- Practice result titles use the local practice player's ID for the same `You Win` / `You Lost` behavior.
+- The multiplayer Playwright flow now asserts that the winning browser displays `You Win` before capturing the completed-match evidence.
+
+### Commands and runtime verification
+
+- `pnpm --filter @neon-duel/client lint`: passed.
+- `pnpm --filter @neon-duel/client typecheck`: passed.
+- `pnpm --filter @neon-duel/client test`: passed (2 tests).
+- `pnpm --filter @neon-duel/client build`: passed; retained the existing Phaser chunk-size warning.
+- `pnpm exec playwright test --config playwright.reuse-local.config.ts`: passed (1 two-browser production E2E test, 43.5 seconds) using temporary isolated preview ports. The temporary configuration was removed after verification.
+
+### Remaining work
+
+- None for result win/loss labels.

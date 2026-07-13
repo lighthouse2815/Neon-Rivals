@@ -36,10 +36,30 @@ export type AppState = {
 
 export type StateListener = (state: AppState) => void;
 
-const DEFAULT_STATE: AppState = {
+const DEFAULT_PLAYER_NAME = "Neon Pilot";
+const PLAYER_NAME_STORAGE_KEY = "neon-duel-player-name";
+
+const readStoredPlayerName = (): string => {
+  try {
+    const playerName = globalThis.localStorage?.getItem(PLAYER_NAME_STORAGE_KEY);
+    return playerName?.trim() ? playerName : DEFAULT_PLAYER_NAME;
+  } catch {
+    return DEFAULT_PLAYER_NAME;
+  }
+};
+
+const persistPlayerName = (playerName: string): void => {
+  try {
+    globalThis.localStorage?.setItem(PLAYER_NAME_STORAGE_KEY, playerName);
+  } catch {
+    // Keep the current in-memory name when storage is unavailable.
+  }
+};
+
+const createDefaultState = (): AppState => ({
   view: "menu",
   mode: "menu",
-  playerName: "Neon Pilot",
+  playerName: readStoredPlayerName(),
   roomCodeDraft: "",
   room: null,
   latestMatch: null,
@@ -51,10 +71,10 @@ const DEFAULT_STATE: AppState = {
   connectionLabel: "Offline ready",
   banner: null,
   result: null
-};
+});
 
 export class AppStore {
-  private state: AppState = DEFAULT_STATE;
+  private state: AppState = createDefaultState();
   private readonly listeners = new Set<StateListener>();
 
   getState(): AppState {
@@ -70,15 +90,19 @@ export class AppStore {
   }
 
   setState(patch: Partial<AppState> | ((state: AppState) => AppState)): void {
+    const previousState = this.state;
     this.state =
       typeof patch === "function" ? patch(this.state) : { ...this.state, ...patch };
+    if (this.state.playerName !== previousState.playerName) {
+      persistPlayerName(this.state.playerName);
+    }
     for (const listener of this.listeners) {
       listener(this.state);
     }
   }
 
   reset(): void {
-    this.state = DEFAULT_STATE;
+    this.state = createDefaultState();
     for (const listener of this.listeners) {
       listener(this.state);
     }

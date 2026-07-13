@@ -106,6 +106,12 @@ export type RoomSummary = {
   roundNumber: number;
 };
 
+export type RematchRequestedPayload = {
+  roomCode: string;
+  requesterId: string;
+  requesterName: string;
+};
+
 export type Snapshot = {
   serverTime: number;
   tick: number;

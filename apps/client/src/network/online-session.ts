@@ -7,6 +7,7 @@ import {
   type InputCommand,
   type MatchState,
   type PlayerState,
+  type RematchRequestedPayload,
   type RoomSummary,
   type ServerGameEvent,
   type Snapshot
@@ -27,7 +28,7 @@ type JoinPayload = {
 type SessionCallbacks = {
   onArenaNeeded: () => void;
   onLobbyNeeded: () => void;
-  onResult: (winnerName: string) => void;
+  onResult: (didWin: boolean) => void;
   onBanner: (message: string, kind?: "info" | "error") => void;
   onRoomChanged: (room: RoomSummary | null) => void;
 };
@@ -101,6 +102,16 @@ export class OnlineSession implements ArenaDriver {
       }
     });
 
+    this.socket.on(SERVER_EVENTS.rematchRequested, (payload: RematchRequestedPayload) => {
+      if (payload.requesterId === this.playerId) {
+        return;
+      }
+      this.callbacks.onBanner(
+        `${payload.requesterName} wants a rematch. Press Ready Up when you are ready.`,
+        "info"
+      );
+    });
+
     this.socket.on(SERVER_EVENTS.countdown, () => {
       this.callbacks.onArenaNeeded();
     });
@@ -115,10 +126,7 @@ export class OnlineSession implements ArenaDriver {
         room: this.store.getState().room
       });
       if (snapshot.state.phase === "match-over") {
-        const winner = snapshot.state.players.find(
-          (player) => player.id === snapshot.state.matchWinnerId
-        );
-        this.callbacks.onResult(winner?.name ?? "Match Complete");
+        this.callbacks.onResult(snapshot.state.matchWinnerId === this.playerId);
       } else {
         this.callbacks.onArenaNeeded();
       }
@@ -201,6 +209,7 @@ export class OnlineSession implements ArenaDriver {
     if (!this.roomCode) {
       return;
     }
+    this.callbacks.onBanner("Rematch request sent. Waiting for your opponent.", "info");
     this.socket?.emit(CLIENT_EVENTS.rematch, {
       roomCode: this.roomCode
     });

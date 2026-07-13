@@ -25,7 +25,7 @@ export class LocalPracticeDriver implements ArenaDriver {
 
   constructor(
     private readonly getPlayerName: () => string,
-    private readonly onMatchComplete: (winnerName: string) => void
+    private readonly onMatchComplete: (didWin: boolean) => void
   ) {
     this.match = this.createFreshMatch();
   }
@@ -81,8 +81,7 @@ export class LocalPracticeDriver implements ArenaDriver {
       this.eventQueue.push(...result.events);
 
       if (this.match.phase === "match-over") {
-        const winner = this.match.players.find((player) => player.id === this.match.matchWinnerId);
-        this.onMatchComplete(winner?.name ?? "Practice Complete");
+        this.onMatchComplete(this.match.matchWinnerId === this.localPlayerId);
         break;
       }
     }

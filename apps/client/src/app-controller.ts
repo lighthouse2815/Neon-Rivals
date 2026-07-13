@@ -12,10 +12,10 @@ export class AppController {
   readonly online = new OnlineSession(this.store, {
     onArenaNeeded: () => this.navigate("arena", "online"),
     onLobbyNeeded: () => this.navigate("lobby", "online"),
-    onResult: (winnerName) => {
+    onResult: (didWin) => {
       this.store.setState({
         result: {
-          title: winnerName,
+          title: didWin ? "You Win" : "You Lost",
           subtitle: "Match complete"
         },
         view: "result",
@@ -38,10 +38,10 @@ export class AppController {
 
   readonly practice = new LocalPracticeDriver(
     () => this.store.getState().playerName,
-    (winnerName) => {
+    (didWin) => {
       this.store.setState({
         result: {
-          title: winnerName,
+          title: didWin ? "You Win" : "You Lost",
           subtitle: "Practice concluded"
         },
         view: "result",

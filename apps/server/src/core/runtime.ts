@@ -71,6 +71,13 @@ export type AdvanceResult = {
   }>;
 };
 
+export type RematchRequestResult = {
+  startedCountdown: boolean;
+  requesterId: string;
+  requesterName: string;
+  notifyOpponent: boolean;
+};
+
 const SNAPSHOT_INTERVAL_MS = 1000 / GAME_CONSTANTS.snapshotHz;
 const TICK_INTERVAL_MS = 1000 / GAME_CONSTANTS.simulationTickHz;
 
@@ -200,12 +207,25 @@ export class NeonDuelRuntime {
     return false;
   }
 
-  requestRematch(socketId: string, roomCode: string, now: number): boolean {
-    if (this.getRoom(roomCode).match.phase !== "match-over") {
+  requestRematch(socketId: string, roomCode: string, now: number): RematchRequestResult {
+    const { room, player } = this.getPlayerForSocket(socketId, roomCode);
+    const notifyOpponent = room.match.phase === "match-over";
+
+    if (notifyOpponent) {
+      this.resetRoomToWaiting(room, true);
+      room.match.roundNumber = 1;
+    }
+
+    if (room.match.phase !== "waiting") {
       throw new RuntimeError("INVALID_STATE", "Rematch is only available after the match ends.");
     }
 
-    return this.setReady(socketId, roomCode, true, now);
+    return {
+      startedCountdown: this.setReady(socketId, roomCode, true, now),
+      requesterId: player.id,
+      requesterName: player.name,
+      notifyOpponent
+    };
   }
 
   leaveRoom(socketId: string, roomCode: string, now: number): void {

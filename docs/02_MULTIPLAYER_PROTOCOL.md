@@ -37,6 +37,8 @@
   - Payload: `{ roomCode, playerId, reconnectToken, invitationUrl, room }`
 - `room:update`
   - Payload: `{ room: RoomSummary }`
+- `room:rematch-requested`
+  - Payload: `{ roomCode, requesterId, requesterName }`; emitted only to the opponent after a finished match is returned to the lobby.
 - `game:countdown`
   - Payload: `{ roomCode, countdownRemainingMs }`
 - `game:snapshot`

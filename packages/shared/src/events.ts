@@ -15,6 +15,7 @@ export const SERVER_EVENTS = {
   created: "room:created",
   joined: "room:joined",
   roomUpdate: "room:update",
+  rematchRequested: "room:rematch-requested",
   countdown: "game:countdown",
   snapshot: "game:snapshot",
   gameEvent: "game:event",
