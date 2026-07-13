@@ -23,7 +23,10 @@ export class LocalPracticeDriver implements ArenaDriver {
   private readonly eventQueue: ServerGameEvent[] = [];
   private projectileCounter = 0;
 
-  constructor(private readonly onMatchComplete: (winnerName: string) => void) {
+  constructor(
+    private readonly getPlayerName: () => string,
+    private readonly onMatchComplete: (winnerName: string) => void
+  ) {
     this.match = this.createFreshMatch();
   }
 
@@ -101,7 +104,7 @@ export class LocalPracticeDriver implements ArenaDriver {
   private createFreshMatch(): MatchState {
     const match = createEmptyMatchState("LOCAL");
     match.players = [
-      createPlayerState(this.localPlayerId, "Pilot One", 0),
+      createPlayerState(this.localPlayerId, this.getPlayerName().trim() || "Pilot One", 0),
       createPlayerState(this.botPlayerId, "Ghost Mirror", 1)
     ];
     for (const player of match.players) {

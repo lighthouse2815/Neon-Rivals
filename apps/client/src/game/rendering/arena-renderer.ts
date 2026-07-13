@@ -98,12 +98,15 @@ export class ArenaRenderer {
 
   private configureCamera(): void {
     const camera = this.scene.cameras.main;
-    const zoom = Math.min(
+    const zoom = Math.max(
+      0.2,
+      Math.min(
       this.scene.scale.width / (GAME_CONSTANTS.arenaWidth + 160),
       this.scene.scale.height / (GAME_CONSTANTS.arenaHeight + 160)
+      )
     );
-    camera.setBounds(0, 0, GAME_CONSTANTS.arenaWidth, GAME_CONSTANTS.arenaHeight);
-    camera.setZoom(Math.max(0.45, zoom));
+    camera.removeBounds();
+    camera.setZoom(zoom);
     camera.centerOn(GAME_CONSTANTS.arenaWidth / 2, GAME_CONSTANTS.arenaHeight / 2);
   }
 

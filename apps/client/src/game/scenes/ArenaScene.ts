@@ -9,6 +9,7 @@ import { ArenaRenderer } from "../rendering/arena-renderer";
 export class ArenaScene extends Phaser.Scene {
   private inputController?: InputController;
   private arenaRenderer?: ArenaRenderer;
+  private lastUiSyncAt = 0;
 
   constructor(private readonly controller: AppController) {
     super("ArenaScene");
@@ -19,6 +20,7 @@ export class ArenaScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, GAME_CONSTANTS.arenaWidth, GAME_CONSTANTS.arenaHeight);
     this.inputController = new InputController(this);
     this.arenaRenderer = new ArenaRenderer(this, this.controller.audio);
+    this.lastUiSyncAt = 0;
     this.controller.getActiveDriver().enter();
     this.events.once("shutdown", () => {
       this.controller.getActiveDriver().leave();
@@ -40,11 +42,16 @@ export class ArenaScene extends Phaser.Scene {
       return;
     }
 
-    this.controller.store.setState({
-      latestMatch: nextFrame.match,
-      pingMs: nextFrame.pingMs
-    });
-    this.arenaRenderer?.render(nextFrame, Date.now());
+    const now = Date.now();
+    if (now - this.lastUiSyncAt >= 100) {
+      this.lastUiSyncAt = now;
+      this.controller.store.setState({
+        latestMatch: nextFrame.match,
+        playerId: nextFrame.localPlayerId,
+        pingMs: nextFrame.pingMs
+      });
+    }
+    this.arenaRenderer?.render(nextFrame, now);
     this.arenaRenderer?.consumeEvents(driver.drainEvents(), nextFrame);
   }
 }

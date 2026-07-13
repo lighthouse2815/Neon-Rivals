@@ -238,3 +238,123 @@ pnpm preview:e2e
 
 - Investigate why Browser B in `apps/client/e2e/multiplayer.spec.ts` can still stall before reaching `latestMatch.phase === "active"` under Playwright, even after explicit foreground switching.
 - No gameplay or backend feature changes were made in this maintenance update beyond test-configuration and E2E stability adjustments.
+
+## Deployment preparation update 2026-07-13
+
+### Files changed
+
+- `render.yaml`
+- `docs/05_PROGRESS.md`
+- `docs/evidence/render-deploy-check.png`
+- `docs/evidence/cloudflare-deploy-check.png`
+
+### Functionality completed
+
+- Added a Render Blueprint file at the repo root so the backend can be imported from GitHub with build/start commands prefilled.
+- Collected live deployment evidence for the current external blockers on Render and Cloudflare.
+
+### Commands executed
+
+- `git remote -v`
+- `Get-ChildItem -Force`
+- `Get-Content package.json`
+- `Get-Content apps/client/package.json`
+- `Get-Content apps/server/package.json`
+- `Get-Content apps/server/src/config.ts`
+- `Get-Content apps/client/src/network/online-session.ts`
+- `node --input-type=module -` with a Playwright probe against `https://dashboard.render.com` and `https://dash.cloudflare.com`
+
+### Test results
+
+- Render dashboard probe: reached `https://dashboard.render.com/login` and confirmed login is required before creating a service.
+- Cloudflare dashboard probe: reached `https://dash.cloudflare.com/` but was stopped by the anti-bot verification page `Just a moment...`.
+- Local artifact capture: screenshots saved successfully under `docs/evidence/`.
+
+### Remaining work
+
+- Render deployment still needs an authenticated dashboard session to import `https://github.com/lighthouse2815/Neon-Rivals`.
+- Cloudflare Pages deployment still needs a human-verified browser session to pass the anti-bot check and connect the same GitHub repo.
+- After Cloudflare Pages assigns the final frontend URL, Render environment variables must be set to that exact public origin for `CLIENT_ORIGIN` and `INVITATION_BASE_URL`.
+
+## Offline HUD and result-control fix 2026-07-13
+
+### Files changed
+
+- `apps/client/src/app-controller.ts`
+- `apps/client/src/game/scenes/ArenaScene.ts`
+- `docs/05_PROGRESS.md`
+
+### Bugs found and fixed
+
+- Practice Offline did not set the active local-player ID in UI state, so the enemy HUD selected `Pilot One` twice and showed the player's HP as the bot's HP. `ArenaScene` now publishes the current render frame's `localPlayerId` to the store.
+- Result controls could become unclickable because controller navigation started a new Phaser scene without stopping the active `ArenaScene`. The arena kept publishing state every frame and repeatedly replaced the Result DOM. Navigation now stops every non-target active scene before starting the target scene.
+
+### Commands and runtime verification
+
+- `pnpm --filter @neon-duel/client typecheck`: passed.
+- `pnpm --filter @neon-duel/client test`: passed (1 test).
+- `pnpm --filter @neon-duel/client build`: passed; retained the existing Phaser main-chunk size warning.
+- Manual local browser verification at `http://127.0.0.1:4173`:
+  - Practice HUD now displays `Pilot One` and `Ghost Mirror` as separate players.
+  - After a completed offline match, `Main Menu` returned to the menu screen successfully.
+  - `Rematch` was verified to begin a fresh offline round before the scene-navigation cleanup; the cleanup removes the DOM rerender condition that caused result buttons to become unreliable.
+
+## Editable lobby fields fix 2026-07-13
+
+### Files changed
+
+- `apps/client/src/ui/shell.ts`
+- `docs/05_PROGRESS.md`
+
+### Bugs found and fixed
+
+- Editing the pilot name or room code triggered a state update that replaced the whole UI root. The replacement detached the focused input after the first keystroke, making name entry appear to close or eject the field.
+- The UI shell now records the focused `data-action` input and its selection range before rendering, then restores focus and cursor position on its replacement after rendering.
+
+### Commands and runtime verification
+
+- `pnpm --filter @neon-duel/client typecheck`: passed.
+- `pnpm --filter @neon-duel/client test`: passed (1 test).
+- Manual local browser verification: typed `Alpha` character by character into `Pilot Name`; the input remained active and retained the full value.
+
+## Practice player-name propagation fix 2026-07-13
+
+### Files changed
+
+- `apps/client/src/app-controller.ts`
+- `apps/client/src/game/local-practice.ts`
+- `docs/05_PROGRESS.md`
+
+### Bugs found and fixed
+
+- The player name entered in the menu was not used in Practice Offline because the local match always created the human player with the hard-coded name `Pilot One`.
+- `LocalPracticeDriver` now obtains the current player name from `AppController` whenever a fresh practice match is created, with `Pilot One` retained only as an empty-name fallback.
+
+### Commands and runtime verification
+
+- `pnpm --filter @neon-duel/client typecheck`: passed.
+- `pnpm --filter @neon-duel/client test`: passed (1 test).
+- Manual local browser verification: entering `Arena AlphaNeon Pilot` before Practice Offline produced the same name in the local player's HUD; the enemy HUD remained `Ghost Mirror`.
+
+## Arena layout and back-control fix 2026-07-13
+
+### Files changed
+
+- `apps/client/src/game/rendering/arena-renderer.ts`
+- `apps/client/src/game/scenes/ArenaScene.ts`
+- `apps/client/src/ui/shell.ts`
+- `apps/client/src/styles.css`
+- `docs/05_PROGRESS.md`
+
+### Functionality completed
+
+- The arena camera now uses the available viewport size and has no restrictive camera bounds, keeping the arena centered instead of pinning it to the top on narrow, tall screens.
+- Added a visible `Back to Menu` control while a match is active. It invokes the existing leave/menu flow, so online matches leave their room and practice matches return directly to the menu.
+- Limited UI-store synchronization during arena play to 10 Hz while leaving Phaser rendering at full frame rate. This prevents the HUD's DOM replacement from detaching the Back button during an ordinary click.
+
+### Commands and runtime verification
+
+- `pnpm --filter @neon-duel/client lint`: passed.
+- `pnpm --filter @neon-duel/client typecheck`: passed.
+- `pnpm --filter @neon-duel/client test`: passed (1 test).
+- Manual local browser verification: arena displayed centered, `Back to Menu` appeared during Practice Offline, and a standard button click returned to the menu.

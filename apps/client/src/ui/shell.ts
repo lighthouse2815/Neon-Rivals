@@ -204,6 +204,7 @@ export const createUiShell = (
     const mapping: Record<string, () => void> = {
       practice: () => controller.startPractice(),
       online: () => controller.openOnlineLobby(),
+      "back-to-menu": () => controller.returnToMenu(),
       "create-room": () => controller.createRoom(),
       "join-room": () => controller.joinRoom(),
       ready: () => controller.toggleReady(),
@@ -222,6 +223,13 @@ export const createUiShell = (
   };
 
   controller.store.subscribe((state) => {
+    const focusedInput = document.activeElement;
+    const focusedAction =
+      focusedInput instanceof HTMLInputElement ? focusedInput.dataset.action ?? null : null;
+    const selectionStart =
+      focusedInput instanceof HTMLInputElement ? focusedInput.selectionStart : null;
+    const selectionEnd = focusedInput instanceof HTMLInputElement ? focusedInput.selectionEnd : null;
+
     root.innerHTML = `
       <div class="shell__top">
         <div class="brand">
@@ -230,6 +238,11 @@ export const createUiShell = (
           <span class="brand__status">${state.connectionLabel}</span>
         </div>
         <div class="chip-row">
+          ${
+            state.view === "arena"
+              ? '<button class="chip chip--back" data-action="back-to-menu">Back to Menu</button>'
+              : ""
+          }
           <button class="chip" data-action="toggle-sound">
             ${state.soundEnabled ? "Sound On" : "Sound Off"}
           </button>
@@ -241,5 +254,17 @@ export const createUiShell = (
       ${renderHud(state)}
     `;
     bindActions();
+
+    if (focusedAction) {
+      const replacementInput = root.querySelector<HTMLInputElement>(
+        `input[data-action="${focusedAction}"]`
+      );
+      if (replacementInput) {
+        replacementInput.focus();
+        if (selectionStart !== null && selectionEnd !== null) {
+          replacementInput.setSelectionRange(selectionStart, selectionEnd);
+        }
+      }
+    }
   });
 };

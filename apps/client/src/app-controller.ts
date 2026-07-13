@@ -12,7 +12,7 @@ export class AppController {
   readonly online = new OnlineSession(this.store, {
     onArenaNeeded: () => this.navigate("arena", "online"),
     onLobbyNeeded: () => this.navigate("lobby", "online"),
-    onResult: (winnerName) =>
+    onResult: (winnerName) => {
       this.store.setState({
         result: {
           title: winnerName,
@@ -20,7 +20,9 @@ export class AppController {
         },
         view: "result",
         mode: "online"
-      }),
+      });
+      this.navigate("result", "online");
+    },
     onBanner: (message, kind = "info") =>
       this.store.setState({
         banner: {
@@ -34,16 +36,20 @@ export class AppController {
       })
   });
 
-  readonly practice = new LocalPracticeDriver((winnerName) => {
-    this.store.setState({
-      result: {
-        title: winnerName,
-        subtitle: "Practice concluded"
-      },
-      view: "result",
-      mode: "practice"
-    });
-  });
+  readonly practice = new LocalPracticeDriver(
+    () => this.store.getState().playerName,
+    (winnerName) => {
+      this.store.setState({
+        result: {
+          title: winnerName,
+          subtitle: "Practice concluded"
+        },
+        view: "result",
+        mode: "practice"
+      });
+      this.navigate("result", "practice");
+    }
+  );
 
   private game: Phaser.Game | null = null;
 
@@ -194,10 +200,24 @@ export class AppController {
         : view === "arena"
             ? "ArenaScene"
             : "ResultScene";
-    const activeSceneKey = this.game.scene.getScenes(true)[0]?.scene.key;
-    if (activeSceneKey === sceneKey && current.view === view && current.mode === mode) {
+    const activeSceneKeys = this.game.scene.getScenes(true).map((scene) => scene.scene.key);
+    if (
+      activeSceneKeys.length === 1 &&
+      activeSceneKeys[0] === sceneKey &&
+      current.view === view &&
+      current.mode === mode
+    ) {
       return;
     }
-    this.game.scene.start(sceneKey);
+
+    for (const activeSceneKey of activeSceneKeys) {
+      if (activeSceneKey !== sceneKey) {
+        this.game.scene.stop(activeSceneKey);
+      }
+    }
+
+    if (!activeSceneKeys.includes(sceneKey)) {
+      this.game.scene.start(sceneKey);
+    }
   }
 }

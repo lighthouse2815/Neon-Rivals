@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: neon-rivals-server
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @neon-duel/server build
+    startCommand: pnpm --filter @neon-duel/server start
+    envVars:
+      - key: NODE_VERSION
+        value: 24.0.0
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: INVITATION_BASE_URL
+        sync: false
